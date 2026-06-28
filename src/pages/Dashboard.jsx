@@ -3,9 +3,9 @@ import { useAuth } from '../context/AuthContext'
 
 const MENU = [
   { emoji: '📍', label: 'スポット管理',      desc: '地図スポットの追加・編集・説明文更新', path: '/spots' },
+  { emoji: '💬', label: 'ポスト管理',        desc: 'ユーザー投稿の一覧・絞り込み・削除',   path: '/posts' },
   { emoji: '📬', label: 'スポットリクエスト', desc: 'ゲストからの提案を審査（承認 / 却下）',  path: null },
   { emoji: '📢', label: 'プロモーション管理', desc: 'バナー広告の作成・公開・非公開切替',     path: null },
-  { emoji: '🛡️', label: '投稿モデレーション', desc: '通報された投稿を確認・削除',             path: null },
 ]
 
 const S = {

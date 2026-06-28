@@ -567,6 +567,21 @@ export default function Spots() {
                             {showDeleted ? '復活中' : '編集中'}
                           </div>
                         )}
+                        {!showDeleted && (
+                          <button
+                            type="button"
+                            onClick={e => { e.stopPropagation(); navigate(`/posts?spot_id=${spot.id}`) }}
+                            style={{
+                              flexShrink: 0, padding: '4px 9px',
+                              background: 'transparent', color: '#64748b',
+                              border: '1.5px solid #e2e8f0', borderRadius: 6,
+                              fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            💬 投稿を見る
+                          </button>
+                        )}
                       </div>
                     )
                   })}
