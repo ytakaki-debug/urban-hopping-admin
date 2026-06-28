@@ -34,7 +34,7 @@ const MENU = [
   {
     emoji: '📢', label: 'プロモーション管理',
     desc: 'バナー広告の作成・公開・非公開切替',
-    path: null, badgeKey: null,
+    path: '/promotions', badgeKey: null,
   },
 ]
 
