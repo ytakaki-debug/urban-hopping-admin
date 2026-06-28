@@ -26,21 +26,52 @@ const LANGS = [
 
 const CATEGORIES = [
   { value: '',           label: '── 未選択 ──' },
-  { value: 'core',       label: 'コア（ホテル関連）' },
-  { value: 'food',       label: 'グルメ・食事' },
+  { value: 'food',       label: '飲食店' },
   { value: 'shopping',   label: 'ショッピング' },
   { value: 'experience', label: '体験・観光' },
+  { value: 'core',       label: 'COREスポット' },
 ]
 
 const SUB_CATEGORIES = {
-  core:       [{ value: 'manager_pick',      label: 'スタッフおすすめ' }],
-  food:       [{ value: 'yatai',             label: '屋台' },
-               { value: 'restaurant',        label: 'レストラン' }],
-  shopping:   [{ value: 'mall',              label: 'ショッピングモール' },
-               { value: 'local_shop',        label: 'ローカルショップ' }],
-  experience: [{ value: 'tourist_spot',      label: '観光スポット' },
-               { value: 'cultural_heritage', label: '文化・神社仏閣' },
-               { value: 'outdoor',           label: 'アウトドア・自然' }],
+  food: [
+    { value: 'cafe',        label: 'カフェ・スイーツ' },
+    { value: 'bakery',      label: 'ベーカリー' },
+    { value: 'ramen',       label: 'ラーメン' },
+    { value: 'yatai',       label: '屋台' },
+    { value: 'udon',        label: 'うどん' },
+    { value: 'yakiniku',    label: '焼肉' },
+    { value: 'yakitori',    label: '焼き鳥' },
+    { value: 'motsu_nabe',  label: 'もつ鍋' },
+    { value: 'mizutaki',    label: '水炊き' },
+    { value: 'seafood',     label: 'お魚系' },
+    { value: 'korean',      label: '韓国料理' },
+    { value: 'chinese',     label: '中華料理' },
+    { value: 'italian',     label: 'イタリアン' },
+    { value: 'french',      label: 'フレンチ' },
+    { value: 'vegan',       label: 'ビーガン' },
+    { value: 'halal',       label: 'ムスリム料理' },
+    { value: 'bar',         label: 'バー・パブ' },
+    { value: 'fast_food',   label: 'ファストフード' },
+  ],
+  shopping: [
+    { value: 'supermarket', label: 'スーパー' },
+    { value: 'convenience', label: 'コンビニ' },
+    { value: 'pharmacy',    label: '薬局' },
+    { value: 'donki',       label: 'ドンキホーテ' },
+    { value: 'mall',        label: 'モール・百貨店' },
+    { value: 'souvenir',    label: 'お土産' },
+    { value: 'hobby',       label: 'ホビー・アニメ' },
+  ],
+  experience: [
+    { value: 'cultural_heritage', label: '文化財' },
+    { value: 'tourist_spot',      label: '観光スポット' },
+    { value: 'nature',            label: '自然・動物' },
+    { value: 'activity',          label: 'アクティビティ' },
+  ],
+  core: [
+    { value: 'manager_pick', label: '支配人おすすめ' },
+    { value: 'staff_pick',   label: 'スタッフおすすめ' },
+  ],
 }
 
 const TIME_TYPES = [
