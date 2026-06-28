@@ -3,11 +3,39 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 
+// badgeKey  : badges オブジェクトのキー（nullなら非表示）
+// badgeBg   : バッジの背景色
+// alertMsg  : アラート行のプレフィックステキスト
+// alertBg/alertColor/alertBorder : アラート行の配色
 const MENU = [
-  { emoji: '📍', label: 'スポット管理',      desc: '地図スポットの追加・編集・説明文更新', path: '/spots',  badgeKey: null },
-  { emoji: '💬', label: 'ポスト管理',        desc: 'ユーザー投稿の一覧・絞り込み・削除',   path: '/posts',  badgeKey: 'reports' },
-  { emoji: '📬', label: 'スポットリクエスト', desc: 'ゲストからの提案を審査（承認 / 却下）',  path: null,      badgeKey: null },
-  { emoji: '📢', label: 'プロモーション管理', desc: 'バナー広告の作成・公開・非公開切替',     path: null,      badgeKey: null },
+  {
+    emoji: '📍', label: 'スポット管理',
+    desc: '地図スポットの追加・編集・説明文更新',
+    path: '/spots', badgeKey: null,
+  },
+  {
+    emoji: '💬', label: 'ポスト管理',
+    desc: 'ユーザー投稿の一覧・絞り込み・削除',
+    path: '/posts', badgeKey: 'reports',
+    badgeBg: '#dc2626',
+    alertMsg: '🚩 要対応の通報',
+    alertBg: '#fef2f2', alertColor: '#dc2626', alertBorder: '#fecaca',
+    okMsg: '✓ 未対応の通報なし', okColor: '#16a34a',
+  },
+  {
+    emoji: '📬', label: 'スポットリクエスト',
+    desc: 'ゲストからの提案を審査（承認 / 却下）',
+    path: '/spot-requests', badgeKey: 'requests',
+    badgeBg: '#f59e0b',
+    alertMsg: '📬 未処理のリクエスト',
+    alertBg: '#fffbeb', alertColor: '#d97706', alertBorder: '#fde68a',
+    okMsg: '✓ 未処理のリクエストなし', okColor: '#16a34a',
+  },
+  {
+    emoji: '📢', label: 'プロモーション管理',
+    desc: 'バナー広告の作成・公開・非公開切替',
+    path: null, badgeKey: null,
+  },
 ]
 
 const S = {
@@ -21,8 +49,8 @@ const S = {
   heading: { margin: '0 0 6px', fontSize: 20, fontWeight: 800, color: '#1a2744' },
   sub:     { margin: '0 0 28px', fontSize: 13, color: '#94a3b8' },
   grid:    { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, maxWidth: 860 },
-  card:    { background: '#fff', borderRadius: 12, padding: '24px 20px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1.5px solid #f1f5f9', cursor: 'pointer', transition: 'box-shadow .15s, transform .15s' },
-  cEmoji:  { fontSize: 30, marginBottom: 12 },
+  card:    { background: '#fff', borderRadius: 12, padding: '24px 20px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', cursor: 'pointer', transition: 'box-shadow .15s, transform .15s' },
+  cEmoji:  { fontSize: 30 },
   cLabel:  { fontSize: 14, fontWeight: 700, color: '#1a2744', marginBottom: 4 },
   cDesc:   { fontSize: 12, color: '#94a3b8', lineHeight: 1.5 },
 }
@@ -31,22 +59,24 @@ export default function Dashboard() {
   const navigate             = useNavigate()
   const { session, signOut } = useAuth()
 
-  // 未処理通報数（ポストごとにユニーク集計）
-  const [reportedCount, setReportedCount] = useState(null)
+  const [reportedCount, setReportedCount]   = useState(null)
+  const [requestCount, setRequestCount]     = useState(null)
 
   useEffect(() => {
-    supabase
-      .from('reports')
-      .select('post_id')
+    // 通報されたポストのユニーク件数
+    supabase.from('reports').select('post_id')
       .then(({ data }) => {
-        if (data) {
-          const unique = new Set(data.map(r => r.post_id))
-          setReportedCount(unique.size)
-        }
+        if (data) setReportedCount(new Set(data.map(r => r.post_id)).size)
       })
+
+    // 未処理スポットリクエスト件数
+    supabase.from('spot_requests')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pending')
+      .then(({ count }) => setRequestCount(count ?? 0))
   }, [])
 
-  const badges = { reports: reportedCount }
+  const badges = { reports: reportedCount, requests: requestCount }
 
   return (
     <div style={S.page}>
@@ -64,8 +94,9 @@ export default function Dashboard() {
 
         <div style={S.grid}>
           {MENU.map(item => {
-            const badgeCount = item.badgeKey ? (badges[item.badgeKey] ?? null) : null
+            const badgeCount = item.badgeKey != null ? (badges[item.badgeKey] ?? null) : null
             const hasAlert   = badgeCount !== null && badgeCount > 0
+            const isReady    = badgeCount === 0        // ロード済み & 0件
 
             return (
               <div
@@ -74,29 +105,30 @@ export default function Dashboard() {
                   ...S.card,
                   opacity: item.path ? 1 : 0.55,
                   cursor: item.path ? 'pointer' : 'default',
-                  border: hasAlert ? '1.5px solid #fca5a5' : '1.5px solid #f1f5f9',
+                  border: hasAlert
+                    ? `1.5px solid ${item.alertBorder || '#fca5a5'}`
+                    : '1.5px solid #f1f5f9',
                 }}
                 onClick={() => item.path && navigate(item.path)}
                 onMouseEnter={e => {
-                  if (item.path) {
-                    e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.10)'
-                    e.currentTarget.style.transform = 'translateY(-2px)'
-                  }
+                  if (!item.path) return
+                  e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.10)'
+                  e.currentTarget.style.transform = 'translateY(-2px)'
                 }}
                 onMouseLeave={e => {
                   e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)'
                   e.currentTarget.style.transform = 'translateY(0)'
                 }}
               >
-                {/* 絵文字 + バッジ */}
+                {/* 絵文字 + バッジ数字 */}
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
                   <div style={S.cEmoji}>{item.emoji}</div>
                   {hasAlert && (
                     <span style={{
-                      background: '#dc2626', color: '#fff',
+                      background: item.badgeBg || '#dc2626', color: '#fff',
                       borderRadius: 99, fontSize: 11, fontWeight: 800,
                       padding: '2px 8px', minWidth: 22, textAlign: 'center',
-                      lineHeight: '18px', display: 'inline-block',
+                      lineHeight: '18px',
                     }}>
                       {badgeCount}
                     </span>
@@ -106,26 +138,27 @@ export default function Dashboard() {
                 <div style={S.cLabel}>{item.label}</div>
                 <div style={S.cDesc}>{item.desc}</div>
 
-                {/* 通報アラート行 */}
+                {/* アラート行：件数あり */}
                 {hasAlert && (
                   <div style={{
-                    marginTop: 10,
-                    padding: '5px 10px',
-                    background: '#fef2f2', borderRadius: 6,
-                    fontSize: 11, fontWeight: 700, color: '#dc2626',
-                    border: '1px solid #fecaca',
+                    marginTop: 10, padding: '5px 10px',
+                    background: item.alertBg || '#fef2f2',
+                    borderRadius: 6, fontSize: 11, fontWeight: 700,
+                    color: item.alertColor || '#dc2626',
+                    border: `1px solid ${item.alertBorder || '#fecaca'}`,
                   }}>
-                    🚩 要対応の通報: {badgeCount}件
+                    {item.alertMsg}: {badgeCount}件
                   </div>
                 )}
 
-                {/* バッジが0件のとき：問題なし表示 */}
-                {badgeCount === 0 && (
-                  <div style={{ marginTop: 10, fontSize: 11, color: '#16a34a', fontWeight: 600 }}>
-                    ✓ 未対応の通報なし
+                {/* 問題なし行：0件確認済み */}
+                {isReady && !hasAlert && item.okMsg && (
+                  <div style={{ marginTop: 10, fontSize: 11, color: item.okColor || '#16a34a', fontWeight: 600 }}>
+                    {item.okMsg}
                   </div>
                 )}
 
+                {/* COMING SOON */}
                 {!item.path && (
                   <div style={{ marginTop: 8, fontSize: 10, fontWeight: 700, color: '#cbd5e1', letterSpacing: '0.06em' }}>
                     COMING SOON
