@@ -36,6 +36,11 @@ const MENU = [
     desc: 'バナー広告の作成・公開・非公開切替',
     path: '/promotions', badgeKey: null,
   },
+  {
+    emoji: '📊', label: 'データ分析（インサイト）',
+    desc: '国籍・カテゴリー・人気スポットなどゲスト動向を可視化',
+    path: '/insights', badgeKey: null,
+  },
 ]
 
 const S = {

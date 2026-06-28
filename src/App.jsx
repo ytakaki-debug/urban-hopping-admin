@@ -6,6 +6,7 @@ import Spots from './pages/Spots'
 import Posts from './pages/Posts'
 import SpotRequests from './pages/SpotRequests'
 import Promotions from './pages/Promotions'
+import Insights from './pages/Insights'
 
 function ProtectedRoute({ children }) {
   const { session } = useAuth()
@@ -38,6 +39,7 @@ function AppRoutes() {
       <Route path="/posts"          element={<ProtectedRoute><Posts /></ProtectedRoute>} />
       <Route path="/spot-requests" element={<ProtectedRoute><SpotRequests /></ProtectedRoute>} />
       <Route path="/promotions"   element={<ProtectedRoute><Promotions /></ProtectedRoute>} />
+      <Route path="/insights"    element={<ProtectedRoute><Insights /></ProtectedRoute>} />
       <Route path="*"              element={<Navigate to="/" replace />} />
     </Routes>
   )
