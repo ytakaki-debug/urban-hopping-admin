@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
@@ -13,7 +13,7 @@ const LANGS = [
 
 const BLANK_FORM = {
   title_ja: '', title_en: '', title_ko: '', title_zh_tw: '', title_zh_cn: '',
-  image_url: '', link_url: '', is_active: true,
+  link_url: '', is_active: true,
 }
 
 const INPUT_S = {
@@ -24,51 +24,183 @@ const INPUT_S = {
 
 function Toggle({ checked, onChange }) {
   return (
-    <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-      <div
-        onClick={onChange}
-        style={{
-          position: 'relative', width: 44, height: 24, borderRadius: 12,
-          background: checked ? '#059669' : '#e2e8f0',
-          transition: 'background .2s', flexShrink: 0, cursor: 'pointer',
-        }}
-      >
-        <div style={{
-          position: 'absolute', top: 2, left: checked ? 22 : 2, width: 20, height: 20,
-          background: '#fff', borderRadius: '50%', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-          transition: 'left .2s',
-        }} />
-      </div>
-    </label>
+    <div
+      onClick={onChange}
+      style={{
+        position: 'relative', width: 44, height: 24, borderRadius: 12,
+        background: checked ? '#059669' : '#e2e8f0',
+        transition: 'background .2s', flexShrink: 0, cursor: 'pointer',
+      }}
+    >
+      <div style={{
+        position: 'absolute', top: 2, left: checked ? 22 : 2, width: 20, height: 20,
+        background: '#fff', borderRadius: '50%', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+        transition: 'left .2s',
+      }} />
+    </div>
   )
 }
 
+/* ── 画像ドロップゾーン ─────────────────────────────────────────── */
+function ImageDropzone({ imgFile, imgPreview, onFileSelect, onClear }) {
+  const [isDragging, setIsDragging] = useState(false)
+  const fileInputRef = useRef(null)
+
+  const handleFile = (file) => {
+    if (!file) return
+    if (!file.type.startsWith('image/')) return
+    onFileSelect(file)
+  }
+
+  const handleDrop = (e) => {
+    e.preventDefault()
+    setIsDragging(false)
+    handleFile(e.dataTransfer.files[0])
+  }
+
+  return (
+    <div>
+      <div style={{ fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+        バナー画像
+      </div>
+
+      {imgPreview ? (
+        /* ─ プレビュー表示 ─ */
+        <div style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', border: '1.5px solid #e2e8f0' }}>
+          <img
+            src={imgPreview}
+            alt="preview"
+            style={{ width: '100%', height: 160, objectFit: 'cover', display: 'block' }}
+          />
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0)', transition: 'background .15s' }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.18)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,0,0,0)'}
+          />
+          <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 6 }}>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                padding: '5px 10px', background: 'rgba(255,255,255,0.92)', border: 'none',
+                borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer', color: '#1a2744',
+                backdropFilter: 'blur(4px)',
+              }}
+            >
+              変更する
+            </button>
+            <button
+              type="button"
+              onClick={onClear}
+              style={{
+                padding: '5px 10px', background: 'rgba(220,38,38,0.88)', border: 'none',
+                borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer', color: '#fff',
+                backdropFilter: 'blur(4px)',
+              }}
+            >
+              削除
+            </button>
+          </div>
+          <div style={{
+            position: 'absolute', bottom: 8, left: 8,
+            background: 'rgba(0,0,0,0.55)', color: '#fff',
+            borderRadius: 4, padding: '2px 8px', fontSize: 10, fontWeight: 600,
+          }}>
+            {imgFile ? imgFile.name : '現在の画像'}
+          </div>
+        </div>
+      ) : (
+        /* ─ ドロップゾーン ─ */
+        <div
+          onDrop={handleDrop}
+          onDragOver={e => { e.preventDefault(); setIsDragging(true) }}
+          onDragLeave={() => setIsDragging(false)}
+          onDragEnter={e => { e.preventDefault(); setIsDragging(true) }}
+          onClick={() => fileInputRef.current?.click()}
+          style={{
+            border: `2px dashed ${isDragging ? '#3b82f6' : '#e2e8f0'}`,
+            borderRadius: 10, padding: '28px 20px', textAlign: 'center', cursor: 'pointer',
+            background: isDragging ? '#eff6ff' : '#f8fafc',
+            transition: 'border-color .15s, background .15s',
+          }}
+        >
+          <div style={{ fontSize: 28, marginBottom: 8, lineHeight: 1 }}>🖼</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: isDragging ? '#3b82f6' : '#374151', marginBottom: 4 }}>
+            {isDragging ? 'ここにドロップ！' : 'クリックして画像を選択'}
+          </div>
+          <div style={{ fontSize: 11, color: '#94a3b8' }}>
+            またはドラッグ＆ドロップ（JPG・PNG・WebP 等）
+          </div>
+        </div>
+      )}
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={e => handleFile(e.target.files[0])}
+      />
+    </div>
+  )
+}
+
+/* ── 追加モーダル ──────────────────────────────────────────────── */
 function AddModal({ onClose, onAdded, showToast }) {
-  const [form, setForm] = useState(BLANK_FORM)
+  const [form, setForm]         = useState(BLANK_FORM)
   const [activeLang, setActiveLang] = useState('ja')
-  const [saving, setSaving] = useState(false)
-  const [imgError, setImgError] = useState(false)
+  const [saving, setSaving]     = useState(false)
+  const [imgFile, setImgFile]   = useState(null)
+  const [imgPreview, setImgPreview] = useState(null)
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  const handleFileSelect = (file) => {
+    if (imgPreview) URL.revokeObjectURL(imgPreview)
+    setImgFile(file)
+    setImgPreview(URL.createObjectURL(file))
+  }
+
+  const handleClearImage = () => {
+    if (imgPreview) URL.revokeObjectURL(imgPreview)
+    setImgFile(null)
+    setImgPreview(null)
+  }
 
   const handleSubmit = async () => {
     if (!form.title_ja.trim()) { showToast('error', '日本語タイトルは必須です'); return }
     setSaving(true)
     try {
+      // 1. 画像アップロード（ファイルが選択された場合のみ）
+      let image_url = null
+      if (imgFile) {
+        const ext  = imgFile.name.split('.').pop().toLowerCase()
+        const path = `promotions/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+        const { data: storageData, error: storageErr } = await supabase.storage
+          .from('promotion-images')
+          .upload(path, imgFile, { cacheControl: '3600', upsert: false })
+        if (storageErr) throw new Error(`[Storage] ${storageErr.message}`)
+        const { data: { publicUrl } } = supabase.storage
+          .from('promotion-images')
+          .getPublicUrl(storageData.path)
+        image_url = publicUrl
+      }
+
+      // 2. DB INSERT
       const { data, error } = await supabase.from('promotions').insert({
         title_ja:    form.title_ja.trim(),
         title_en:    form.title_en.trim()    || null,
         title_ko:    form.title_ko.trim()    || null,
         title_zh_tw: form.title_zh_tw.trim() || null,
         title_zh_cn: form.title_zh_cn.trim() || null,
-        image_url:   form.image_url.trim()   || null,
-        link_url:    form.link_url.trim()    || null,
+        image_url,
+        link_url:    form.link_url.trim() || null,
         is_active:   form.is_active,
       }).select().single()
       if (error) throw error
+
       showToast('success', `「${form.title_ja}」を登録しました！`)
       onAdded(data)
     } catch (err) {
-      showToast('error', `[DB] ${err.message}`)
+      showToast('error', err.message)
       setSaving(false)
     }
   }
@@ -84,6 +216,7 @@ function AddModal({ onClose, onAdded, showToast }) {
         maxHeight: '90vh', overflowY: 'auto',
         boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
       }}>
+        {/* ヘッダー */}
         <div style={{ padding: '20px 24px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ fontSize: 15, fontWeight: 800, color: '#1a2744' }}>📢 プロモーションを追加</div>
           <button onClick={onClose}
@@ -92,7 +225,7 @@ function AddModal({ onClose, onAdded, showToast }) {
           </button>
         </div>
 
-        <div style={{ padding: '16px 24px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div style={{ padding: '16px 24px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
           {/* タイトル（言語タブ） */}
           <div>
@@ -120,31 +253,17 @@ function AddModal({ onClose, onAdded, showToast }) {
             />
           </div>
 
-          {/* 画像URL */}
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 5 }}>バナー画像URL</div>
-            <input
-              value={form.image_url}
-              onChange={e => { set('image_url', e.target.value); setImgError(false) }}
-              placeholder="https://example.com/banner.jpg"
-              style={{ ...INPUT_S, marginBottom: form.image_url && !imgError ? 8 : 0 }}
-            />
-            {form.image_url && !imgError && (
-              <img
-                src={form.image_url}
-                alt="preview"
-                style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 8, display: 'block', border: '1px solid #e2e8f0' }}
-                onError={() => setImgError(true)}
-              />
-            )}
-            {form.image_url && imgError && (
-              <div style={{ fontSize: 11, color: '#ef4444', marginTop: 4 }}>画像を読み込めませんでした。URLを確認してください。</div>
-            )}
-          </div>
+          {/* 画像アップロード（ドラッグ＆ドロップ） */}
+          <ImageDropzone
+            imgFile={imgFile}
+            imgPreview={imgPreview}
+            onFileSelect={handleFileSelect}
+            onClear={handleClearImage}
+          />
 
           {/* リンクURL */}
           <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 5 }}>リンク先URL</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 5 }}>リンク先URL（任意）</div>
             <input
               value={form.link_url}
               onChange={e => set('link_url', e.target.value)}
@@ -153,7 +272,7 @@ function AddModal({ onClose, onAdded, showToast }) {
             />
           </div>
 
-          {/* is_active */}
+          {/* 公開状態トグル */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <Toggle checked={form.is_active} onChange={() => set('is_active', !form.is_active)} />
             <span style={{ fontSize: 13, fontWeight: 600, color: form.is_active ? '#059669' : '#94a3b8' }}>
@@ -169,7 +288,7 @@ function AddModal({ onClose, onAdded, showToast }) {
             </button>
             <button onClick={handleSubmit} disabled={saving}
               style={{ flex: 2, padding: '11px', background: saving ? '#94a3b8' : '#1a2744', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
-              {saving ? '登録中...' : '📢 プロモーションを登録'}
+              {saving ? (imgFile ? '画像をアップロード中...' : '登録中...') : '📢 プロモーションを登録'}
             </button>
           </div>
         </div>
@@ -178,6 +297,7 @@ function AddModal({ onClose, onAdded, showToast }) {
   )
 }
 
+/* ── ユーティリティ ─────────────────────────────────────────────── */
 function formatDate(d) {
   if (!d) return '-'
   return new Date(d).toLocaleString('ja-JP', {
@@ -186,13 +306,14 @@ function formatDate(d) {
   })
 }
 
+/* ── メインコンポーネント ──────────────────────────────────────── */
 export default function Promotions() {
   const navigate             = useNavigate()
   const { session, signOut } = useAuth()
 
-  const [promotions, setPromotions]   = useState([])
-  const [loading, setLoading]         = useState(true)
-  const [toast, setToast]             = useState(null)
+  const [promotions, setPromotions]     = useState([])
+  const [loading, setLoading]           = useState(true)
+  const [toast, setToast]               = useState(null)
   const [showAddModal, setShowAddModal] = useState(false)
 
   const showToast = useCallback((type, msg) => {
@@ -352,12 +473,11 @@ export default function Promotions() {
                     <div style={{ fontSize: 15, fontWeight: 700, color: '#1a2744', marginBottom: 6 }}>
                       {promo.title_ja || '（タイトルなし）'}
                     </div>
-                    {promo.link_url && (
+                    {promo.link_url ? (
                       <div style={{ fontSize: 12, color: '#3b82f6', wordBreak: 'break-all', lineHeight: 1.5 }}>
                         🔗 {promo.link_url}
                       </div>
-                    )}
-                    {!promo.link_url && (
+                    ) : (
                       <div style={{ fontSize: 12, color: '#cbd5e1' }}>リンクURL未設定</div>
                     )}
                     <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 8 }}>
@@ -379,7 +499,6 @@ export default function Promotions() {
                       }}>
                       {promo.is_active ? '✓ 公開中 → 非公開にする' : '○ 非公開 → 公開する'}
                     </button>
-
                     <button
                       onClick={() => handleDelete(promo)}
                       style={{
