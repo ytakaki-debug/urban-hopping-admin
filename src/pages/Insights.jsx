@@ -53,7 +53,7 @@ const S = {
   backBtn: { marginBottom: 20, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 14px', background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, color: '#475569', cursor: 'pointer', fontWeight: 600 },
   heading: { margin: '0 0 6px', fontSize: 20, fontWeight: 800, color: '#1a2744' },
   sub:     { margin: '0 0 28px', fontSize: 13, color: '#94a3b8' },
-  statGrid:  { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 },
+  statGrid:  { display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16, marginBottom: 24 },
   statCard:  { background: '#fff', borderRadius: 12, padding: '18px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1.5px solid #f1f5f9' },
   statEmoji: { fontSize: 22, marginBottom: 8 },
   statVal:   { fontSize: 26, fontWeight: 800, color: '#1a2744', lineHeight: 1, marginBottom: 4 },
@@ -124,11 +124,14 @@ export default function Insights() {
   const { session, signOut } = useAuth()
   const [loading, setLoading] = useState(true)
 
-  const [totalPosts, setTotalPosts]   = useState(null)
-  const [categoryData, setCategoryData] = useState([])
-  const [spotRanking, setSpotRanking] = useState([])
-  const [natData, setNatData]         = useState([])
-  const [compData, setCompData]       = useState([])
+  const [totalPosts, setTotalPosts]       = useState(null)
+  const [categoryData, setCategoryData]   = useState([])
+  const [spotRanking, setSpotRanking]     = useState([])
+  const [natData, setNatData]             = useState([])
+  const [compData, setCompData]           = useState([])
+  const [totalPV, setTotalPV]             = useState(null)
+  const [spotClickRanking, setSpotClickRanking]     = useState([])
+  const [stationClickRanking, setStationClickRanking] = useState([])
 
   useEffect(() => {
     const load = async () => {
@@ -192,6 +195,39 @@ export default function Insights() {
           .sort((a, b) => b.count - a.count)
       )
 
+      // --- Analytics events ---
+      const { data: events } = await supabase
+        .from('analytics_events')
+        .select('event_type, target_name')
+
+      if (events) {
+        setTotalPV(events.filter(e => e.event_type === 'page_view').length)
+
+        const spotClicks = {}
+        events.filter(e => e.event_type === 'spot_click').forEach(e => {
+          const k = e.target_name || '不明'
+          spotClicks[k] = (spotClicks[k] || 0) + 1
+        })
+        setSpotClickRanking(
+          Object.entries(spotClicks)
+            .map(([name, count]) => ({ name, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 10)
+        )
+
+        const stationClicks = {}
+        events.filter(e => e.event_type === 'station_click').forEach(e => {
+          const k = e.target_name || '不明'
+          stationClicks[k] = (stationClicks[k] || 0) + 1
+        })
+        setStationClickRanking(
+          Object.entries(stationClicks)
+            .map(([name, count]) => ({ name, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 10)
+        )
+      }
+
       setLoading(false)
     }
     load()
@@ -224,6 +260,11 @@ export default function Insights() {
             {/* ─── Stat Cards ─── */}
             <div style={S.statGrid}>
               <div style={S.statCard}>
+                <div style={S.statEmoji}>👁️</div>
+                <div style={S.statVal}>{totalPV ?? '—'}</div>
+                <div style={S.statLabel}>総アクセス数（PV）</div>
+              </div>
+              <div style={S.statCard}>
                 <div style={S.statEmoji}>💬</div>
                 <div style={S.statVal}>{totalPosts ?? 0}</div>
                 <div style={S.statLabel}>総投稿数</div>
@@ -240,7 +281,7 @@ export default function Insights() {
               </div>
               <div style={S.statCard}>
                 <div style={S.statEmoji}>🥇</div>
-                <div style={{ ...S.statVal, fontSize: spotRanking[0]?.name.length > 8 ? 16 : 22 }}>
+                <div style={{ ...S.statVal, fontSize: spotRanking[0]?.name?.length > 8 ? 16 : 22 }}>
                   {spotRanking[0]?.name || '—'}
                 </div>
                 <div style={S.statLabel}>最人気スポット</div>
@@ -270,7 +311,7 @@ export default function Insights() {
               )}
             </div>
 
-            {/* ─── Spot Ranking ─── */}
+            {/* ─── Spot Ranking (posts) ─── */}
             <div style={S.section}>
               <h3 style={S.sTitle}>スポット別人気ランキング（投稿数 TOP10）</h3>
               <p style={S.sSub}>投稿が多いスポット上位10件</p>
@@ -281,6 +322,32 @@ export default function Insights() {
               ) : (
                 <div style={S.empty}>スポットデータがまだありません</div>
               )}
+            </div>
+
+            {/* ─── Spot & Station Click Rankings ─── */}
+            <div style={S.pieGrid}>
+              <div style={S.section}>
+                <h3 style={S.sTitle}>よく見られているスポット（クリック数）</h3>
+                <p style={S.sSub}>ピンをタップされた回数の上位10件</p>
+                {spotClickRanking.length > 0 ? (
+                  spotClickRanking.map((item, i) => (
+                    <SpotRow key={item.name} rank={i + 1} name={item.name} count={item.count} maxCount={spotClickRanking[0].count} />
+                  ))
+                ) : (
+                  <div style={S.empty}>クリックデータがまだありません</div>
+                )}
+              </div>
+              <div style={S.section}>
+                <h3 style={S.sTitle}>よく見られている駅・路線（クリック数）</h3>
+                <p style={S.sSub}>駅マーカーをタップされた回数の上位10件</p>
+                {stationClickRanking.length > 0 ? (
+                  stationClickRanking.map((item, i) => (
+                    <SpotRow key={item.name} rank={i + 1} name={item.name} count={item.count} maxCount={stationClickRanking[0].count} />
+                  ))
+                ) : (
+                  <div style={S.empty}>クリックデータがまだありません</div>
+                )}
+              </div>
             </div>
 
             {/* ─── Pie Charts ─── */}
