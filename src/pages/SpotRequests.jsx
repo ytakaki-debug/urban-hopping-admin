@@ -68,27 +68,42 @@ function ApprovalModal({ request, onClose, onApproved, showToast }) {
 
     setSaving(true)
     try {
-      // 1. spots テーブルに INSERT
-      const { error: insertErr } = await supabase.from('spots').insert({
-        title_ja:   form.title_ja.trim(),
-        title_en:   form.title_en.trim() || null,
-        latitude:   lat,
-        longitude:  lng,
-        time_type:  form.time_type,
-        category:   form.category || null,
-        image_url:  request.image_url || null,
-        is_deleted: false,
-      })
-      if (insertErr) throw insertErr
+      // 1. spots テーブルに INSERT → 新しい spot_id を取得
+      const { data: newSpot, error: insertSpotErr } = await supabase
+        .from('spots')
+        .insert({
+          title_ja:   form.title_ja.trim(),
+          title_en:   form.title_en.trim() || null,
+          latitude:   lat,
+          longitude:  lng,
+          time_type:  form.time_type,
+          category:   form.category || null,
+          image_url:  request.image_url || null,
+          is_deleted: false,
+        })
+        .select('id')
+        .single()
+      if (insertSpotErr) throw new Error(`スポット作成失敗: ${insertSpotErr.message}`)
 
-      // 2. spot_requests を 'approved' に更新
+      // 2. posts テーブルにリクエスト内容を「最初の投稿」として INSERT
+      const { error: insertPostErr } = await supabase.from('posts').insert({
+        spot_id:     newSpot.id,
+        stamp_type:  request.stamp_type  || null,
+        comment:     request.comment     || '',
+        image_url:   request.image_url   || null,
+        companion:   request.companion   || 'unknown',
+        nationality: request.nationality || 'unknown',
+      })
+      if (insertPostErr) throw new Error(`初回投稿作成失敗: ${insertPostErr.message}`)
+
+      // 3. spot_requests を 'approved' に更新
       const { error: updateErr } = await supabase
         .from('spot_requests')
         .update({ status: 'approved' })
         .eq('id', request.id)
-      if (updateErr) throw updateErr
+      if (updateErr) throw new Error(`ステータス更新失敗: ${updateErr.message}`)
 
-      showToast('success', `「${form.title_ja}」をスポットに追加しました！`)
+      showToast('success', `「${form.title_ja}」をスポットに追加し、最初の投稿を登録しました！`)
       onApproved(request.id)
     } catch (err) {
       showToast('error', `エラー: ${err.message}`)
